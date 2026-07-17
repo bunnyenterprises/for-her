@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>For You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #241019;
+    --ink-deep: #170a10;
+    --gold: #d4af7a;
+    --gold-light: #f0dcc0;
+    --paper: #faf3e8;
+    --rose: #e8b8c4;
+    --text-light: #f6ece6;
+    --text-dim: #cbb2bc;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: radial-gradient(ellipse at 50% 0%, #3a1a2c 0%, var(--ink) 55%, var(--ink-deep) 100%);
+    color: var(--text-light);
+    font-family: 'Jost', sans-serif;
+    overflow: hidden;
+  }
+
+  #app {
+    position: relative;
+    height: 100dvh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ambient floating glow particles */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,175,122,0.55) 0%, rgba(212,175,122,0) 70%);
+    filter: blur(2px);
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: drift linear infinite;
+  }
+
+  @keyframes drift {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.8; }
+    90%  { opacity: 0.6; }
+    100% { transform: translateY(-110vh) translateX(20px); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glow { animation: none; display: none; }
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 24px;
+    opacity: 0;
+  }
+
+  .screen.active {
+    display: flex;
+    animation: fadeIn 0.9s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--rose);
+    margin-bottom: 18px;
+    opacity: 0.85;
+  }
+
+  .display-name {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    font-size: clamp(2.6rem, 11vw, 4.2rem);
+    line-height: 1.1;
+    color: var(--gold-light);
+    margin: 0 0 14px 0;
+    text-shadow: 0 0 40px rgba(212,175,122,0.25);
+  }
+
+  .sub {
+    font-size: 1rem;
+    color: var(--text-dim);
+    max-width: 320px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+
+  /* wax seal button — the signature element, reused every screen */
+  .seal {
+    position: relative;
+    width: 118px;
+    height: 118px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: radial-gradient(circle at 32% 28%, var(--gold-light), var(--gold) 55%, #9c7a45 100%);
+    box-shadow:
+      0 8px 24px rgba(0,0,0,0.45),
+      inset 0 2px 6px rgba(255,255,255,0.5),
+      inset 0 -6px 10px rgba(90,60,20,0.4);
+    color: var(--ink-deep);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    animation: pulse 3.2s ease-in-out infinite;
+    transition: transform 0.2s ease;
+  }
+  .seal:active { transform: scale(0.94); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(0,0,0,0.45), inset 0 2px 6px rgba(255,255,255,0.5), inset 0 -6px 10px rgba(90,60,20,0.4), 0 0 0 0 rgba(212,175,122,0.35); }
+    50%      { box-shadow: 0 8px 28px rgba(0,0,0,0.45), inset 0 2px 6px rgba(255,255,255,0.5), inset 0 -6px 10px rgba(90,60,20,0.4), 0 0 0 14px rgba(212,175,122,0); }
+  }
+
+  .seal-label {
+    margin-top: 22px;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  textarea {
+    width: 100%;
+    max-width: 360px;
+    min-height: 110px;
+    background: rgba(250,243,232,0.06);
+    border: 1px solid rgba(212,175,122,0.4);
+    border-radius: 14px;
+    padding: 16px;
+    color: var(--text-light);
+    font-family: 'Jost', sans-serif;
+    font-size: 1rem;
+    resize: none;
+    margin-bottom: 26px;
+    outline: none;
+  }
+  textarea:focus { border-color: var(--gold); }
+  textarea::placeholder { color: rgba(203,178,188,0.6); }
+
+  .send-btn {
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    color: var(--ink-deep);
+    border: none;
+    padding: 14px 34px;
+    border-radius: 30px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    transition: transform 0.15s ease;
+  }
+  .send-btn:active { transform: scale(0.96); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* the letter / poem card */
+  .letter {
+    background: var(--paper);
+    color: #3a2418;
+    border-radius: 4px;
+    padding: 34px 28px 30px;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    position: relative;
+    opacity: 0;
+    animation: riseIn 1s ease forwards;
+  }
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .quote {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #7a5c46;
+    border-left: 2px solid var(--gold);
+    padding-left: 12px;
+    margin-bottom: 22px;
+    text-align: left;
+    line-height: 1.5;
+  }
+
+  .poem {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    line-height: 1.85;
+    text-align: left;
+    white-space: pre-line;
+    opacity: 0;
+    animation: fadeIn 1.2s ease 0.5s forwards;
+  }
+
+  .signature {
+    margin-top: 22px;
+    text-align: right;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: #7a5c46;
+    opacity: 0;
+    animation: fadeIn 1s ease 1.4s forwards;
+  }
+
+  .ps-link {
+    display: inline-block;
+    margin-top: 28px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--text-dim);
+    opacity: 0;
+    animation: fadeIn 1s ease 2s forwards;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- SCREEN 1 -->
+  <section class="screen active" id="screen-1">
+    <div class="eyebrow">a little something for you</div>
+    <h1 class="display-name" id="name-display">Her Name</h1>
+    <p class="sub">There's something I want to tell you. But first, I need you to do just one small thing.</p>
+    <button class="seal" onclick="goTo(2)">tap here</button>
+    <div class="seal-label" id="seal-label-1">it's for you</div>
+  </section>
+
+  <!-- SCREEN 2 -->
+  <section class="screen" id="screen-2">
+    <div class="eyebrow">before I say anything</div>
+    <h1 class="display-name" style="font-size:clamp(1.6rem,7vw,2.2rem)">what do you feel for me?</h1>
+    <p class="sub">Just be honest. A word, a sentence, whatever's true right now.</p>
+    <textarea id="her-message" placeholder="type it here..."></textarea>
+    <button class="send-btn" id="submit-btn" onclick="submitMessage()" disabled>send it my way</button>
+  </section>
+
+  <!-- SCREEN 3 -->
+  <section class="screen" id="screen-3">
+    <div class="letter">
+      <div class="quote" id="quoted-message"></div>
+      <div class="poem" id="poem-text"></div>
+      <div class="signature" id="signature"></div>
+    </div>
+    <a class="ps-link" id="whatsapp-link" href="#" target="_blank" rel="noopener">ps — tap here so this actually reaches me 💌</a>
+  </section>
+
+</div>
+
+<script>
+  /* ============================================
+     EDIT THESE THREE THINGS — that's all you need
+     ============================================ */
+  const CONFIG = {
+    herName: "Her Name",          // <-- put her name here, exactly how you want it to appear
+    yourName: "Bunty",            // <-- signs the poem at the end
+    whatsappNumber: "",           // <-- optional. e.g. "91XXXXXXXXXX" (country code, no +, no spaces)
+                                   //     leave empty ("") to hide the "send this to me" link
+
+    poem: `Before the world woke up today,
+before the noise, before the light,
+I thought of you — the quiet way
+a heart just knows when things are right.
+
+You are the pause I didn't know I needed,
+the calm inside a restless mind,
+proof that love, when it's unheeded,
+still finds the one it's meant to find.
+
+So here's my heart, plain and undressed,
+no clever words, no grand design —
+just someone who, among the rest,
+is endlessly, happily yours and mine.`
+  };
+  /* ============================================ */
+
+  document.getElementById('name-display').textContent = CONFIG.herName;
+  document.getElementById('seal-label-1').textContent = `tap ${CONFIG.herName.split(' ')[0]}`;
+
+  function goTo(n) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + n).classList.add('active');
+  }
+
+  const textarea = document.getElementById('her-message');
+  const submitBtn = document.getElementById('submit-btn');
+  textarea.addEventListener('input', () => {
+    submitBtn.disabled = textarea.value.trim().length === 0;
+  });
+
+  function submitMessage() {
+    const msg = textarea.value.trim();
+    if (!msg) return;
+
+    document.getElementById('quoted-message').textContent = `you said: "${msg}"`;
+    document.getElementById('poem-text').textContent = CONFIG.poem;
+    document.getElementById('signature').textContent = `— ${CONFIG.yourName}`;
+
+    const wa = document.getElementById('whatsapp-link');
+    if (CONFIG.whatsappNumber && CONFIG.whatsappNumber.trim().length > 0) {
+      const text = encodeURIComponent(`She said: "${msg}" 💛`);
+      wa.href = `https://wa.me/${CONFIG.whatsappNumber.trim()}?text=${text}`;
+    } else {
+      wa.style.display = 'none';
+    }
+
+    goTo(3);
+  }
+
+  // ambient floating glow particles
+  function spawnGlow() {
+    const g = document.createElement('div');
+    g.className = 'glow';
+    const size = 40 + Math.random() * 90;
+    g.style.width = size + 'px';
+    g.style.height = size + 'px';
+    g.style.left = Math.random() * 100 + 'vw';
+    g.style.bottom = '-10vh';
+    g.style.animationDuration = (10 + Math.random() * 10) + 's';
+    document.body.appendChild(g);
+    setTimeout(() => g.remove(), 21000);
+  }
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    for (let i = 0; i < 6; i++) setTimeout(spawnGlow, i * 900);
+    setInterval(spawnGlow, 2200);
+  }
+</script>
+
+</body>
+</html>
